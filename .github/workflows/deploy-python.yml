@@ -1,3 +1,73 @@
+# name: Build and Deploy to GKE
+
+# on:
+#   push:
+#     branches: [ master ]
+
+# env:
+#   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+#   GKE_CLUSTER: gke-cluster
+#   GKE_ZONE: us-central1
+
+# jobs:
+#   setup-build-publish-deploy:
+#     name: Setup, Build, Publish, and Deploy
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout
+#       uses: actions/checkout@v2
+
+#     # Authenticate with Google Cloud
+#     - name: Authenticate to Google Cloud
+#       uses: google-github-actions/auth@v1
+#       with:
+#         credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+#     # Set up gcloud CLI
+#     - name: Setup gcloud CLI
+#       uses: google-github-actions/setup-gcloud@v1
+#       with:
+#         project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+# # Configure Docker to push to Artifact Registry
+#     - name: Configure Docker for Artifact Registry
+#       run: |
+#         gcloud auth configure-docker us-central1-docker.pkg.dev
+#     # Authenticate Docker with Artifact Registry using access token
+    
+#     - name: Authenticate Docker to Artifact Registry
+#       run: |
+#         gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+
+#     # Build Docker image
+#     - name: Build Docker image
+#       run: |
+#         docker build -t us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest .
+
+#     # Push Docker image to Artifact Registry
+#     - name: Push Docker image to Artifact Registry
+#       run: |
+#          docker push us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest 
+
+#     #Optionally get GKE credentials and deploy to GKE
+#     - name: Get GKE Credentials
+#       run: |
+#         gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
+#     - name: Deploy to GKE
+#       run: |
+#         kubectl set image deployment/time-api time-api=${ARTIFACTORY_REPO}/${IMAGE}:${GITHUB_SHA}
+#         kubectl rollout status deployment/time-api
+
+#     #Optionally test the deployed application
+#     - name: Test the deployed application
+#       run: |
+#         EXTERNAL_IP=$(kubectl get service time-api-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+#         curl http://$EXTERNAL_IP
+#         curl http://$
+
+
 name: Build and Deploy to GKE
 
 on:
@@ -8,6 +78,7 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GKE_CLUSTER: gke-cluster
   GKE_ZONE: us-central1
+  IMAGE: us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest
 
 jobs:
   setup-build-publish-deploy:
@@ -30,12 +101,12 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-# Configure Docker to push to Artifact Registry
+    # Configure Docker to push to Artifact Registry
     - name: Configure Docker for Artifact Registry
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev
-    # Authenticate Docker with Artifact Registry using access token
-    
+
+    # Authenticate Docker with Artifact Registry
     - name: Authenticate Docker to Artifact Registry
       run: |
         gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
@@ -43,26 +114,32 @@ jobs:
     # Build Docker image
     - name: Build Docker image
       run: |
-        docker build -t us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest .
+        docker build -t $IMAGE .
 
     # Push Docker image to Artifact Registry
     - name: Push Docker image to Artifact Registry
       run: |
-         docker push us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest 
+        docker push $IMAGE 
 
-    # Optionally get GKE credentials and deploy to GKE
-    # - name: Get GKE Credentials
-    #   run: |
-    #     gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+    # Get GKE credentials
+    - name: Get GKE Credentials
+      run: |
+        gcloud container clusters get-credentials k8s-cluster --region us-central1 --project gke-ks  
 
-    # - name: Deploy to GKE
-    #   run: |
-    #     kubectl set image deployment/time-api time-api=${ARTIFACTORY_REPO}/${IMAGE}:${GITHUB_SHA}
-    #     kubectl rollout status deployment/time-api
+    # Deploy the Deployment and Service to GKE
+    - name: Apply Kubernetes Manifests
+      run: |
+        kubectl apply -f kubernetes/deployment.yaml
+        kubectl apply -f kubernetes/service.yaml
+
+    # Optionally check deployment status
+    - name: Check Deployment Status
+      run: |
+        kubectl rollout status deployment/time-api
+        kubectl get pods
 
     # Optionally test the deployed application
-    # - name: Test the deployed application
-    #   run: |
-    #     EXTERNAL_IP=$(kubectl get service time-api-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
-    #     curl http://$EXTERNAL_IP
-    #     curl http://$
+    - name: Test the deployed application
+      run: |
+        EXTERNAL_IP=$(kubectl get service time-api-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+        curl http://$EXTERNAL_IP
