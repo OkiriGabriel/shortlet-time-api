@@ -9,7 +9,7 @@ env:
   GKE_CLUSTER: gke-cluster
   GKE_ZONE: us-central1
   IMAGE: shortlet-app
-  ARTIFACTORY_REPO: us-central1-docker.pkg.dev/$PROJECT_ID/shortlet-app # Update with your Artifact Registry repo
+  ARTIFACTORY_REPO: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/shortlet-app # Update with your Artifact Registry repo
 
 jobs:
   setup-build-publish-deploy:
