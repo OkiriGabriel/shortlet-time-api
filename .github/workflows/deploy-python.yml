@@ -8,8 +8,8 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GKE_CLUSTER: gke-cluster
   GKE_ZONE: us-central1
-  IMAGE: shortlet
-  ARTIFACTORY_REPO: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/shortlet-app # Update with your Artifact Registry repo
+  IMAGE: shortlet-app
+  ARTIFACTORY_REPO: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/shortlet # Update with your Artifact Registry repo
 
 jobs:
   setup-build-publish-deploy:
@@ -32,7 +32,11 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    # Configure Docker to push to Artifact Registry
+    # Authenticate Docker with Artifact Registry using access token
+    - name: Authenticate Docker to Artifact Registry
+      run: |
+        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+# Configure Docker to push to Artifact Registry
     - name: Configure Docker for Artifact Registry
       run: |
         gcloud auth configure-docker us-central1-docker.pkg.dev
@@ -40,12 +44,12 @@ jobs:
     # Build Docker image
     - name: Build Docker image
       run: |
-        docker build -t $ARTIFACTORY_REPO/$IMAGE:latest .
+        docker build -t ${ARTIFACTORY_REPO}/${IMAGE}:latest .
 
     # Push Docker image to Artifact Registry
     - name: Push Docker image to Artifact Registry
       run: |
-        docker push $ARTIFACTORY_REPO/$IMAGE:latest
+        docker push ${ARTIFACTORY_REPO}/${IMAGE}:latest
 
     # Optionally get GKE credentials and deploy to GKE
     # - name: Get GKE Credentials
@@ -54,7 +58,7 @@ jobs:
 
     # - name: Deploy to GKE
     #   run: |
-    #     kubectl set image deployment/time-api time-api=$ARTIFACTORY_REPO/$IMAGE:$GITHUB_SHA
+    #     kubectl set image deployment/time-api time-api=${ARTIFACTORY_REPO}/${IMAGE}:${GITHUB_SHA}
     #     kubectl rollout status deployment/time-api
 
     # Optionally test the deployed application
@@ -62,4 +66,4 @@ jobs:
     #   run: |
     #     EXTERNAL_IP=$(kubectl get service time-api-service -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
     #     curl http://$EXTERNAL_IP
-    #     curl http://$EXTERNAL_IP/welcome
+    #     curl http://$
