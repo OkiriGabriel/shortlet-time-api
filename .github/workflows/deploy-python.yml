@@ -8,8 +8,6 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GKE_CLUSTER: gke-cluster
   GKE_ZONE: us-central1
-  IMAGE: shortlet
-  ARTIFACTORY_REPO: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/shortlet-app # Update with your Artifact Registry repo
 
 jobs:
   setup-build-publish-deploy:
@@ -45,12 +43,12 @@ jobs:
     # Build Docker image
     - name: Build Docker image
       run: |
-        docker build -t ${ARTIFACTORY_REPO}/${IMAGE}:latest .
+        docker build -t us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest .
 
     # Push Docker image to Artifact Registry
     - name: Push Docker image to Artifact Registry
       run: |
-        docker push ${ARTIFACTORY_REPO}/${IMAGE}:latest
+         docker push us-central1-docker.pkg.dev/gke-ks/shortlet-api/shortlet:latest 
 
     # Optionally get GKE credentials and deploy to GKE
     # - name: Get GKE Credentials
