@@ -38,11 +38,11 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t gcr.io/$PROJECT_ID/$IMAGE:$latest .
+        docker build -t gcr.io/$PROJECT_ID/$IMAGE:latest .
 
     - name: Push Docker image to GCR
       run: |
-        docker push gcr.io/$PROJECT_ID/$IMAGE:$latest
+        docker push gcr.io/$PROJECT_ID/$IMAGE:latest
 
     # - name: Get GKE Credentials
     #   run: |
